@@ -1,0 +1,241 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.lang.Math;
+
+init with {:
+ 	 table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+
+parser code {:
+  
+	public HashMap<String, HashMap<String, Integer>> table;
+
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol)
+            if (((Symbol)info).left != -1){
+                int line = (((Symbol)info).left)+1;
+                int column = (((Symbol)info).right)+1;
+                System.err.print(" (line "+line+", column "+column+"): ");
+            } else System.err.print(": ");
+        else System.err.print(": ");
+    }
+
+public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+ 
+
+// Terminals / non Terminals section
+terminal TOKEN1,TOKEN2,TOKEN3,SEP;
+terminal START,STATE,IF,DONE,DO,PRINT,NEWS,FI,CASE;
+terminal EQ, CM, COL,RO, RC, SO,SC, S,DOT;
+terminal AND,OR,NOTEQ,EQEQ;
+terminal  String QUOTE,NAME;
+terminal  Integer INT;
+
+
+
+non terminal prog, header, token3,state;
+non terminal Boolean bool_exp;
+non terminal  print,n_state;
+non terminal HashMap att_list,declaration,declarations;
+non terminal Object[] if_list,case_list,_case,cmd_list;
+non terminal String[] cmd;
+
+precedence left OR;
+precedence left EQEQ;
+precedence left NOTEQ;
+precedence left AND;
+
+start with prog;
+
+prog::= header SEP declarations SEP state  ;
+
+
+
+header::= token3 TOKEN1 S token3 TOKEN2 S token3 TOKEN2 S token3 | TOKEN2 S token3 TOKEN1 S token3 TOKEN2 S token3 |TOKEN2 S token3 TOKEN2 S token3 TOKEN1 S token3;
+
+token3::= token3 TOKEN3 S | ;
+
+
+
+declarations::= declarations declaration  declaration 
+			| declaration declaration declaration;
+
+declaration::= NAME:x EQ  NAME SO  att_list:y SC S {: parser.table.put(x,y);
+										 Integer v1 =(Integer)y.get("x");
+										 Integer v2 =(Integer)y.get("y");
+										 Integer v3 =(Integer)y.get("z");
+										 Integer temp = Math.max(v1,v2);
+										 Integer max = Math.max(temp,v3);
+										 Integer temp1 = Math.min(v1,v2);
+										 Integer min=Math.min(temp1,v3);;
+										  System.out.println("Min: "+min+" Max: "+max);
+										:};	
+
+att_list::= att_list:s NAME:x EQ INT:y S {: s.put(x,y); RESULT= s;:}
+		| NAME:x EQ INT:y S {: RESULT = new HashMap<String,Integer>();
+						RESULT.put(x,y);:};
+
+
+state::= START STATE  NAME S  if_list ;
+
+//RICONTROLLARE 
+if_list::=  if_list:x /*nt2*/ IF STATE NAME:s case_list:y FI 
+										{:  RESULT= new Object[3];
+										Object current_state = x[0];
+										Boolean bool = (Boolean)y[0]; // boolean 
+										Object new_state = y[1];
+										if((current_state.equals(s)) && (bool == true)){
+											current_state = new_state;
+											x[0] = current_state;
+											x[1]= s;
+											x[2]= y[1];
+											Object [] array =(Object[]) y[2];
+											System.out.println(array[0]);
+											ArrayList<String> str = (ArrayList<String>)array[1];
+											Integer n =0;
+											for(int i = 0 ; (i< (str.size())/4); i++){
+											HashMap <String,Integer> m = parser.table.get(str.get(n));
+											HashMap <String,Integer> m1 = parser.table.get(str.get(2));
+											m.put(str.get(n+1),m1.get(str.get(n+3)));
+											n+=4;
+										}
+										RESULT[0]=x[0];
+										RESULT[1]=x[1];
+										RESULT[2]=x[2];
+										}
+										//ELSE NOTHING TO PERFORM
+									/* PRINT FOR CHECKING VALUES CORRECTNESS
+									System.out.println(bool);
+									System.out.println(new_state);
+									System.out.println(current_state);
+									System.out.println(s);
+									System.out.println(str);
+									System.out.print(str.get(n)+"."+str.get(n+1)+":"+m.get(str.get(n+1))+" ");
+									System.out.println(str.get(n+2)+"."+str.get(n+3)+":"+m1.get(str.get(n+3))+" ");
+									System.out.println("Value assigned: "+m.put(str.get(n+1),m1.get(str.get(n+3))));
+									System.out.println("State changed in if list:"+x[0]);
+									System.out.println("");
+									*/
+											 :}
+		|  IF STATE NAME:s case_list:x FI {:RESULT = new Object[3];
+		
+									RESULT[0] =parser.stack(-6) ;	//current state
+									RESULT[1]=s; //if state
+									RESULT[2]= x[1]; // change state
+									Boolean bool = (Boolean)x[0];
+									Object new_state = x[1];
+									Object [] array =(Object[]) x[2];
+									ArrayList<String> str = (ArrayList<String>)array[1];
+									if((RESULT[0].equals(RESULT[1])) && (bool == true) ){
+										RESULT[0]= RESULT[2];
+										RESULT[1] = s;
+										System.out.println(array[0]);
+										Integer n =0;
+										for(int i = 0 ; (i< (str.size())/4); i++){
+										HashMap <String,Integer> m = parser.table.get(str.get(n));
+										HashMap <String,Integer> m1 = parser.table.get(str.get(2));
+										m.put(str.get(n+1),m1.get(str.get(n+3)));
+										n+=4;
+										}
+									}
+									//ELSE NOTHING TO PERFORM
+									/*
+									System.out.println(bool);
+									System.out.print(str.get(n)+"."+str.get(n+1)+":"+m.get(str.get(n+1))+" ");
+									System.out.println(str.get(n+2)+"."+str.get(n+3)+":"+m1.get(str.get(n+3))+" ");
+									System.out.println("Value assigned: "+m.put(str.get(n+1),m1.get(str.get(n+3))));
+									System.out.println("State changed in list:"+RESULT[2]);
+									System.out.println("");
+									*/
+									
+								 :};
+
+case_list::= case_list:old  _case:x {:	if(((Boolean)x[0]))
+									 RESULT=x; 
+								else RESULT = old;  :}
+		  | _case:x {: RESULT = x;
+		 			:} ;
+
+_case::= CASE bool_exp:b DO cmd_list:x n_state:s DONE {: 
+											RESULT = new Object[3];
+											RESULT[0] = b;	//boolean 
+											RESULT[1] = s; // command state
+											RESULT[2] =x; //  print[0] , arraylist[1]
+											
+											
+									  :};
+
+
+
+cmd_list::= cmd_list:y  cmd:x {:	RESULT = new Object[2];
+							((ArrayList<String> )y[1]).add(x[0]);
+							((ArrayList<String> )y[1]).add(x[1]);
+							((ArrayList<String> )y[1]).add(x[2]);
+							((ArrayList<String> )y[1]).add(x[3]);
+							RESULT[0]= y[0];
+							RESULT[1] = y[1];
+
+				:}
+		| print:x {: RESULT = new Object[2];
+				   RESULT[0]= x;
+				   RESULT[1] = new ArrayList<String>();
+					
+				
+		
+				:} ;
+									
+					
+
+cmd::= NAME:n DOT NAME:v EQ NAME:n1 DOT NAME:v1 S {:
+										RESULT= new String[4];
+										RESULT[0]= n;
+										RESULT[1]= v;
+										RESULT[2]=n1;
+										RESULT[3]=v1;
+										:} ;
+
+//data::= NAME:x DOT NAME:y {: :} ; Useless
+
+print::= PRINT QUOTE:x S {:RESULT=x;:};
+
+n_state::= NEWS NAME:x S  {: RESULT= x; :};
+
+
+
+
+bool_exp::= bool_exp:x AND bool_exp:y {:RESULT= x && y; :}
+		| bool_exp:x OR bool_exp:y {:RESULT= x || y; :}
+		| NAME:n DOT NAME:v EQEQ NAME:n1 DOT NAME:v1 {: 	HashMap <String,Integer> m = parser.table.get(n);
+												HashMap <String,Integer> m1 = parser.table.get(n1);
+                       								RESULT = m.get(v).equals(m1.get(v1));
+												 :}
+		| NAME:n DOT NAME:v NOTEQ NAME:n1 DOT NAME:v1 {: HashMap <String,Integer> m = parser.table.get(n);
+												HashMap <String,Integer> m1 = parser.table.get(n1);
+												RESULT = !m.get(v).equals(m1.get(v1));
+												:}
+		
+		|NAME:n DOT NAME:v EQEQ INT:v1  {: HashMap <String,Integer> m = parser.table.get(n);
+												RESULT = m.get(v) == v1;
+												:}
+	
+		|NAME:n DOT NAME:v NOTEQ INT:v1 {: HashMap <String,Integer> m = parser.table.get(n);
+												RESULT = m.get(v) != v1 ;
+												:}
+		|RO bool_exp:x RC {:RESULT= x;:};
+	
+
+
+
+
+
+

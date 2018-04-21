@@ -1,0 +1,166 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+       table = new HashMap<String, Boolean>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, Boolean> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+terminal TOKEN1,TOKEN2,TOKEN3,SEP;
+terminal S,EQ,RO,RC,C,BO,BC,SO,SC,CM,DOT;
+terminal EVALUATE,CASE_TRUE, CASE_FALSE, SAVE;
+terminal terminal AND, OR, NOT,O,EQEQ,PLUS,STAR,STR;
+terminal String VAR;
+terminal Double NUM;
+terminal Integer INT,NINT;
+terminal  TRUE,FALSE;
+
+non terminal prog,header,sec1,token1_2,token3;
+non terminal inst_list, inst,eval, save;
+non terminal ass, ass_list;
+non terminal Boolean bexp,case_e;
+non terminal Integer sexp,offset;
+
+non terminal Integer nt0,nt1;
+
+precedence right NOT;
+precedence right EQ;
+precedence left OR;
+precedence left AND;
+precedence left PLUS;
+precedence left STAR;
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog::= header SEP sec1;
+
+header::= token1_2 token3 token1_2 token3 token1_2;
+
+token1_2::= token1_2 TOKEN1 S |token1_2 TOKEN2 S | ;
+token3::= TOKEN3 S; 
+
+sec1::= inst_list;
+
+//right recursive
+inst_list::= inst inst inst_list | inst inst inst inst;
+		
+
+inst::= EVALUATE bexp:x S {: RESULT= x; System.out.println("eval: "+x);:} 
+	  | CASE_TRUE bexp:x CM CASE_FALSE bexp:y S{:
+	  	
+	  									Boolean lastRes = (Boolean)parser.stack(-6);
+										if(lastRes) System.out.println("case: "+x);
+										else System.out.println("case: "+y);
+										RESULT= lastRes;
+									:}
+	|SAVE ass_list S {:RESULT = false; System.out.println("save: "+RESULT);:} ;
+
+
+
+nt0::={:RESULT= -6;:};
+nt1::={:RESULT= -4;:};
+ass_list::= ass_list CM nt1 ass | nt0 ass;
+ass::= VAR:x EQ bexp:y {:parser.table.put(x,y);:}
+	  | VAR:x EQ offset:y {: 
+	  					int offset = (Integer) parser.stack(-3);
+	  					offset +=y;
+	  					Boolean res=(Boolean)parser.stack(offset);
+	  					parser.table.put(x,res);
+	  					 :};
+	  					 
+	  					 
+	  			
+  
+	  
+offset::= O SO NINT:x SC {:RESULT =x;:} ;
+
+
+
+bexp ::= TRUE {: RESULT= true;:} | FALSE {:RESULT= false;  :}
+  | sexp:x EQEQ sexp:y {: RESULT = x==y ;  :}
+  | NOT bexp:x {: RESULT = !x; :}
+  | bexp:x AND bexp:y {:RESULT= x && y;  :}
+  | bexp:x OR bexp:y {:RESULT= x || y; :}
+  | RO bexp:x RC {: RESULT= x; :}
+  | VAR:v {: RESULT = parser.table.get(v); :};
+
+sexp ::= INT:x {:RESULT= x;  :}
+  | sexp:x PLUS sexp:y {:RESULT = x + y;  :}
+  | sexp:x STAR sexp:y {:RESULT= x*y;  :}
+  | RO sexp:x RC {: RESULT= x; :};
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	   
+	    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

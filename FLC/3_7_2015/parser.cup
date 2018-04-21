@@ -1,0 +1,165 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+//    table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+parser code 	{:
+
+    //public HashMap<String, HashMap<String, Integer>> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal CODE1,CODE2,SEP;
+terminal Integer UINT;
+terminal Float FLOAT;
+terminal String PLUS, MINUS;
+terminal SC,C,CM,RO,RC,OX,CEL,MD1,MD2;
+terminal MAX,TEMP,FOOD;
+
+non terminal prog,header;
+non terminal Integer[] start_cmd,cmd1,cmd2,cmd_list,commands;
+non terminal Integer max, int_list,list_var,quantity;
+non terminal token1, code2, token2;
+non terminal section, variation ;
+non terminal String direction;
+non terminal nt0;
+
+
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP section;
+
+header::= token1 code2 | CODE2 SC token2 CODE2 SC token2 ;
+
+token1::= token1 CODE1 SC CODE1 SC  | CODE1 SC CODE1 SC CODE1 SC;
+code2::= CODE2 SC CODE2 SC | CODE2 SC CODE2 SC CODE2 SC | CODE2 SC CODE2 SC CODE2 SC CODE2 SC CODE2 SC ;
+
+token2::= token2 CODE1 SC |/*empty*/ ; 
+
+section::= start_cmd commands;
+
+start_cmd::= OX UINT:o SC CEL UINT:c SC {:RESULT = new Integer[2];
+							RESULT[0]= (Integer)o;
+							RESULT[1]= (Integer)c;
+							:}
+		|CEL UINT:c SC OX:o UINT SC {:RESULT = new Integer[2];
+							RESULT[0]= (Integer)o;
+							RESULT[1]= (Integer)c;	:};
+		
+//nt0::={:RESULT = (Integer[])parser.stack(-1);  :};
+commands::= commands:y  cmd_list:x {: 	RESULT = x;
+									 :}  
+		| cmd_list:x {: RESULT = x;:} ;
+
+cmd_list::= cmd1:x {: RESULT= x;:} SC | cmd2:x {:RESULT= x; :}SC;
+
+cmd1::= MD1 OX PLUS max:x {:	Integer[] tab = (Integer[])parser.stack(-4);
+						RESULT = new Integer[2];
+						RESULT[0]= tab[0]+x;
+						RESULT[1]= tab[1];
+	  					System.out.println("oxygen="+RESULT[0]+" cells="+RESULT[1]);
+						
+					 :}
+	  |MD1 OX MINUS max:x {:	Integer[] tab = (Integer[])parser.stack(-4);
+	  					RESULT = new Integer[2];
+						RESULT[0]= tab[0]-x;
+						RESULT[1]= tab[1];
+	  					System.out.println("oxygen="+RESULT[0]+" cells="+RESULT[1]);
+						 :}
+	  |MD1 CEL PLUS max:x {: 
+	  					Integer[] tab = (Integer[])parser.stack(-4);
+	  					RESULT = new Integer[2];
+						RESULT[0]= tab[0];
+						RESULT[1]= tab[1]+x;
+	  					System.out.println("oxygen="+(RESULT[0])+" cells="+RESULT[1]);
+						 :}
+						
+	  |MD1 CEL MINUS max:x{: Integer[] tab = (Integer[])parser.stack(-4);
+						RESULT = new Integer[2];
+						RESULT[0]= tab[0];
+						RESULT[1]= tab[1]-x;
+	  					System.out.println("oxygen="+RESULT[0]+" cells="+RESULT[1]);
+	  					 :} ;
+	  
+	  
+max::= MAX RO int_list:x RC {:RESULT = x; :} ;
+
+int_list::= int_list:old CM max:x {: RESULT = old > x ? old : x; :}
+		| int_list:old CM UINT:x{: RESULT = old > x ? old : x; :}
+		| UINT:x {:RESULT= x;:} 
+		| max:x {:RESULT= x;:}
+		| {:RESULT=0;:};	
+
+cmd2::= MD2 TEMP FLOAT:x FOOD FLOAT:y  OX C list_var:l {:Integer[] tab = (Integer[])parser.stack(-8);
+											 RESULT = new Integer[2];
+											 RESULT[0] =tab[0]+l;
+											 RESULT[1] =tab[1];
+											 System.out.println("oxygen="+RESULT[0]+" cells="+RESULT[1]);
+											
+										:}
+	   | MD2 TEMP FLOAT FOOD FLOAT CEL C list_var:l {:Integer[] tab = (Integer[])parser.stack(-8);
+											 RESULT = new Integer[2];
+											 RESULT[0] =tab[0];
+											 RESULT[1] =tab[1]+l;
+											 System.out.println("oxygen="+RESULT[0]+" cells="+RESULT[1]);:} ;
+	   
+	   
+	   
+list_var::= list_var:old CM direction:x quantity:y FOOD{: RESULT = (int)(y * (Float)(parser.stack(-7)));
+									  		if(x.compareTo("-")==0) RESULT *=-1; RESULT +=old;
+										 	:} 
+			|list_var:old CM direction:x quantity:y TEMP{: RESULT = (int)(y * (Float)(parser.stack(-9)));
+									  		if(x.compareTo("-")==0) RESULT *=-1; RESULT +=old;	:} 
+			| direction:x quantity:y TEMP{: RESULT = (int)(y * (Float)(parser.stack(-7)));
+									  if(x.compareTo("-")==0) RESULT *=-1; 
+									:} 
+			| direction:x quantity:y FOOD{: RESULT = (int)(y * (Float)(parser.stack(-5)));
+									  if(x.compareTo("-")==0) RESULT *=-1; 	:} ;
+
+
+direction::= PLUS {:RESULT = new String("+");:} | MINUS {:RESULT = new String("-");:} ;
+
+quantity::= UINT:x {:RESULT= x;:};
+
+
+
+
+
+
+
+
+
+

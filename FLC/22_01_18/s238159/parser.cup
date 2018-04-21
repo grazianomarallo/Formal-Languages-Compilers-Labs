@@ -1,0 +1,167 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+import java.lang.Math.*;
+
+init with {:
+       table = new HashMap<String, Double>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, Double> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+    
+:};
+
+action code{:
+	
+	public class Square{
+	int a;
+	
+	public Square(Double a){
+		}
+	}
+	
+:}
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal SEP,TOKEN1,TOKEN2,TOKEN3;
+terminal S,EQ,RO,RC,MINUS,PLUS,STAR,DIV;
+terminal C,BO,BC,SO,SC,CM,INRANGE,FZ,IF,PRINT,QUOTE;
+terminal  PATH,MAX;
+terminal String ID;
+terminal Double FLOAT;
+
+
+
+
+
+non terminal prog,header,instructions,token;
+non terminal inst_list,inst,assignment;
+non terminal String operation;
+non terminal list_inter,inter;
+non terminal Double exp,if_,function;
+non terminal Double[] point,list_point;
+non terminal Boolean range;
+non terminal nt0;
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP instructions {: /*System.out.println("Correct"); */:};
+
+
+header::=  token TOKEN1 S token TOKEN1 S token  ;
+
+token::= token TOKEN2 S | token TOKEN3 S |  ; 
+
+
+
+instructions::= inst_list | ;
+
+inst_list::= inst_list inst inst | inst inst inst inst ;
+
+inst::= assignment S | function S | if_ S ;
+
+
+
+
+assignment::= ID:x EQ exp:y {:parser.table.put(x,y); :}  ;
+
+function::= FZ RO operation:y CM list_point:x RC {: RESULT= (Double)x[2] ;:};
+
+operation::= MAX:x {:RESULT = new String("MAX");:} | PATH:x {:RESULT= new String("PATH");:} ;
+
+list_point::= list_point:old CM point:x  {: 
+							String op = (String)parser.stack(-4);
+							if(op.equals("PATH")){
+								Double p1,p2,sum,sqrt;
+								p1 = Math.pow((x[1]-old[1]),2); //(y2-y1)^2
+								p2= Math.pow((x[0]-old[0]),2);  //(x2-x1)^2
+								sum = p1 +p2; 
+								sqrt = Math.sqrt((p1+p2));
+								RESULT= new Double[3] ; //return the current point 
+								RESULT[0] = x[0];	
+								RESULT[1] = x[1];
+								RESULT[2] = old[2]+sqrt; //and the current distance
+								}
+							else if(op.equals("MAX")){
+								Double p1,p2,sum,sqrt;
+								p1 = Math.pow((x[1]-old[1]),2);//(y2-y1)^2
+								p2= Math.pow((x[0]-old[0]),2); //(x2-x1)^2
+								sum = p1 +p2;
+								sqrt = Math.sqrt((p1+p2));
+								RESULT= new Double[3] ; //return the current point 
+								RESULT[0] = x[0];
+								RESULT[1] = x[1];
+								RESULT[2] = Math.max(old[2],sqrt); //and the max value so far
+		
+								}				
+							:}
+		| point:x {:RESULT=x; :} ;
+
+point::= SO exp:x CM exp:y SC {: RESULT = new Double[3];
+							RESULT[0]=x;
+							RESULT[1]=y;
+							RESULT[2]= 0.0; //set to zero the distance/max value
+							:};
+
+
+nt0::={:RESULT = parser.stack(-2);:};
+
+
+if_::= IF exp:x list_inter {:RESULT = x;:} ;
+
+list_inter::= list_inter CM nt0 inter  | inter:x;
+
+
+
+inter::= INRANGE range:x PRINT QUOTE:q {: if(x) System.out.println(q);:} ;
+
+range::= SO exp:x CM exp:y  SC {:
+						 Double exp1 = (Double)parser.stack(-6);
+					   	 if(x <= exp1 && y >= exp1)
+							RESULT= true;
+						 else 
+							RESULT = false;
+						:} ;
+
+exp::=  exp:x PLUS exp:y {:RESULT= x+y; :}
+	  |exp:x MINUS exp:y  {:RESULT= x-y;:}
+	  |exp:x STAR exp:y {:RESULT= x*y;:}
+	  |exp:x DIV exp:y {:RESULT= x/y;:}
+	  |RO exp:x RC {:RESULT= x;:}
+	  |ID:x {:RESULT= parser.table.get(x);:}
+	  |FLOAT:x {:RESULT= x;:}
+	  |function:x {:RESULT= x;:} ;
+	  

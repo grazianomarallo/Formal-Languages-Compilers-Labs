@@ -1,0 +1,30 @@
+/* Header section */
+/* Second type of sequence. */
+2015/10/17;        /* <date> */
+2016/01/01:07:00;  /* <date> */
+-181ABCDEF***;     /* <token> */
+51xxxyxyxxyy;      /* <token */
+2015/12/28:14:02;  /* <date> */
+%%%%%%%%
+/* States section */
+
+/* First part: One SET instruction (power: 50.0, water: 50.0) */
+SET POWER 50.0 - WATER 50.0;   /* Other examples of the SET instruction are:
+                              SET WATER 50.0 - POWER 100.0;
+                              SET WATER 50.0; If one quantity is empty, its default value is 100.0
+                              Without a SET instruction, default value of both variables is 100.0 */
+
+/* Second part: STATE_CHANGE1 and STATE_CHANGE2 instructions */
+
+/* TRUE OR TRUE AND FALSE = TRUE;   AVG(2.,4.0,3.0)=3.0
+   -> Power decreases of 3.0 (power: 47.0, water: 50.0) */
+STATE_CHANGE1 DECREASE POWER TRUE OR TRUE AND FALSE? AVG(2.,4.0,3.0): AVG(4.0,8.);
+
+/* NOT ( NOT TRUE OR FALSE)=NOT FALSE=TRUE;   AVG(AVG(2.0,2.0),4.0,3.0)=AVG(2.0,4.0,3.0)=3.0 
+   -> Water increases of 3.0 (power: 47.0, water: 53.0) */
+STATE_CHANGE1 INCREASE WATER NOT ( NOT TRUE OR FALSE)? AVG(AVG(2.0,2.0), 4.0, 3.0) : AVG();
+
+/* The result of <var_list> is: + 3.0 * 0.9 + 2.0 * 1.1 - 3.0 * 0.9 = 2.2 */
+/* Power is increased of 2.2 (power: 49.2, water: 53.0) */
+STATE_CHANGE2 .9 PRESSURE 1.1 TEMP # POWER -> PRESSURE ADD 3.0, TEMP ADD 2., PRESSURE SUB 3.0;
+

@@ -1,0 +1,87 @@
+//COMMENT
+
+//C++ Comment
+comment     = \/\/.*
+//C style Comment
+comment     = "/*" ~ "*/"
+
+//SEPARATOR
+sep		= "%%"
+sep		= "##"
+sep		= (("%%%%")("%%")*)|(("#")("##")*) //even number of “%”  (at least 4) or odd number of “#”
+sep		= "$$$"("$$")* /*Separator must be 3 or more $ in an odd number*/ 
+
+
+// POSSIBLE COMBINATION TOKEN AREA
+
+//at least 5 characters “$” or “?” in any order and in odd number 
+(("$"|"?"){5}("$"|"?")*)
+
+//word composed of 4, 6 or 9 alphabetic letters.
+([A-Z]{3}([A-Z]{2})+)) 
+
+//word  composed of 3 or 6 repetitions of the strings “ij”, “ji”, “ii” and “jj” in any combination.
+word = {ij}("+"|"-"){ij}(("+"|"-"){ij}("+"|"-"){ij})*
+ij= ("ij"|"ii"|"jj"|"ji"){3} |("ij"|"ii"|"jj"|"ji"){6}
+
+//Even number of char at least 4 lower or odd number of char at least 5 uppercase 
+word	= "?"(([a-z]{2}([a-z]{2})+)|([A-Z]{3}([A-Z]{2})+))
+
+// binary from 110 - 10101 
+bin= 110 | 111 | 1(0|1){3} | 10000 | 10001 | 10010 | 10011 | 10100 | 10101
+
+//binary number between 101 and 101000
+bin =(101|111|1(0|1){3,4}|100(0|1){3}|101000)
+
+//% repeated an odd number of times, at least 5, or it starts with 2 o 3 repetitions of the words “**” and “???” in any combination 
+(("%%%%%"("%%")*)|(("**"|"???"){2,3}))
+
+//4 or more * or YXY whew the number of X must be odd
+(("****")("*")*)|("Y"("X")("XX")*"Y")
+
+//IJK or the word XYZ (where the number of Z can be zero or odd
+("IJK"|"XY"(("Z")("ZZ")*)
+
+//hour in format :HH:MM or :HH:MM am/pm  8:35 -17:49
+hour= {normal}|{am}|{pm}
+normal=(08":"3[5-9])|(08":"([4-5][0-9]))|(09":"([0-5][0-9]))|(1(0-6)":"([0-5][0-9]))|(17":"([1-4][0-9]))|(17":"5[01])
+am= ((08":"3[5-9])|(08":"[4-5][0-9])|(09":"[0-5][0-9])|(1(0-2)":"[0-5][0-9]))("am")
+pm= ((05":"[0-4][0-9])|(0(1-4)":"[0-5][0-9]))("pm")
+
+
+//HEXADECIMAL
+hex = [0-9a-fA-F]{2} | [0-9a-fA-F]{4} // 2 or 4 repetion of hex normal
+//hex odd beetween -3B and B5
+hex="-"3[13579Bb]|"-"[12]{hex_odd}|"-"?{hex_odd}|[1-9Aa-fA-F]{hex_odd}|[1-9][0-9a-fA-F]{hex_odd}|[Aa][0-9Aa]{hex_odd}|[Aa][Bb][135])?
+hex_odd = [13579BbDdFf]
+
+//ip address
+ip_num =(2(([0-4][0-9])|(5[0-5])))|(1[0-9][0-9])|([1-9][0-9])|([0-9])
+ip ={ip_num}"."{ip_num}"."{ip_num}"."{ip_num} 
+
+
+//QUOTED STRING
+str="\"" ~ "\""
+
+//a letter or the character “ ” and followed by letters, numbers and characters “ ”
+name=[_a-z][_a-z0-9]*
+
+//DOUBLE/FLOAT
+float = [+-]?([0-9]*[.])?[0-9]+
+
+//UNSIGNED INTEGER
+uint = [0-9]| [1-9][0-9]*
+
+//SIGNED INTEGER
+int = [+-]?[0-9]|[+-]?[1-9][0-9]*
+
+
+//NAME FOLLOWED BY NUMBER
+name = [a-zA-Z]+[0-9]*
+
+//STRING WITH REPETION OF CHAR IN ANY ORDER
+strings = ("xx" | "xy" | "yx" | "yy"){4}("xx" | "xy" | "yx" | "yy")*
+
+
+
+

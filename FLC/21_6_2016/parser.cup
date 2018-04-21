@@ -1,0 +1,154 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+    table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, HashMap<String, Integer>> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+
+terminal CODE,HOUR,NUMBER,QUOTE,SEP,INIT,DEFAULT,DO,DONE;
+terminal Integer INT;
+terminal EQ,WHEN,AND,OR,NOT,EQEQ,DOT;
+terminal String SN,AN;
+terminal SO,SC,C,CM,RO,RC,S;
+terminal CASE,PRINT,NEXT;
+
+non terminal prog,header,section,seq1,seq2,hour,code_c,number,code1,number1;
+non terminal state_list, state,transitions_state;
+non terminal HashMap attr_list;
+non terminal when_list,when;
+non terminal Boolean bool,op;
+non terminal  cmd_list, print_cmd,print, case;
+non terminal String transitions;
+non terminal nt0,nt1;
+
+
+// Precedences
+precedence left OR;
+precedence right AND;
+precedence right NOT;
+
+
+
+
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP section SEP transitions_state {:System.out.println("Correct");:};
+
+header::= seq1 | seq2;
+
+seq1::= hour code_c number;
+
+hour::=hour HOUR S |HOUR S HOUR S;
+code_c::= code_c CODE S CODE S | CODE S ;
+number::= NUMBER S NUMBER S  NUMBER S  NUMBER S | NUMBER S NUMBER S | ;
+
+seq2::= code1 number1 number1 number1 |  number1 code1 number1 number1 | number1  number1 code1 number1|number1  number1  number1 code1;
+
+code1::= CODE S;
+number1::= NUMBER S;
+
+section::= state_list ;
+
+state_list::= state_list CM state CM state  | state state state;
+
+state::= SN:x EQ SO attr_list:y SC S {: parser.table.put(x,y); :};
+
+attr_list::= attr_list:m CM AN:x EQ INT:y {:m.put(x,y); RESULT=m; :}
+		   |AN:x EQ INT:y {: RESULT = new HashMap<String, Integer>();
+		 
+						RESULT.put(x,y); :} ;
+
+transitions_state::= transitions when_list  ;
+
+transitions::= INIT SN:x S {: RESULT= x; :} | DEFAULT S {: RESULT = "S0"; :};
+nt1::={: RESULT = parser.stack(-2);:};
+
+when_list::= when_list when:x {:RESULT= x;  :} | nt1 when:x {:RESULT = x; ; :};
+
+when::= WHEN bool:b DO cmd_list:x DONE S {: 
+									if(b){
+									 
+									RESULT=x;
+								
+									}
+									else RESULT = parser.stack(-6);
+								
+									  :};
+
+
+bool::= bool:x AND bool:y {:RESULT= x && y; :}
+	| bool:x OR bool:y {:RESULT= x || y; :}
+	| NOT bool:x {:RESULT= !x ;  :}
+	| RO bool:x RC {:RESULT= x ; :}
+	| op:x {: RESULT= x;:} ;
+	
+
+op::= SN:x DOT AN:y EQEQ INT:z {: HashMap<String,Integer> map = parser.table.get(x);
+					 if((map.get(y)).equals(z))
+					 	RESULT = true;
+					 	else RESULT=false; :};
+
+
+nt0::={: RESULT = parser.stack(-4);:};
+
+cmd_list::= cmd_list print_cmd:y {:RESULT= y;  :} | nt0 print_cmd:x {:RESULT= x; :} ;
+
+print_cmd::= print:x {:RESULT= x; :} | case:x {:RESULT = x;  :}  ;
+
+print::= PRINT QUOTE:x S {: System.out.println(x);:} ;
+
+case::= CASE SN:x NEXT SN:y S {:  String curr = (String)parser.stack(-5);
+
+							if(x.equals(curr))
+								RESULT=y;
+								else RESULT= curr;
+							System.out.println(RESULT);
+ 						 
+ 						:};
+
+
+
+
+
+
+
+
+

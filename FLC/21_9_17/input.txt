@@ -1,0 +1,41 @@
+$hello;                           // <token2>
+2017/07/02#2017/09/02-2017/09/18; // <token1>
+@%@@%%;                           // <token3>
+$1011;                            // <token2>
+%%%%@&@&-13;                      // <token3>
+
+*****
+mo = monkey { x=1; y=2; z=0; };  // print "Min: 0 Max: 2"
+bo = box { x=4; y = 4; z= 0; };  // print "Min: 0 Max: 4"
+ba = banana {x=10; y=15; z=4; }; // print "Min: 4 Max: 15"
+******
+START STATE S1;        // Sets the current state to S1
+
+// The monkey goes to the box
+IF STATE S1 CASE mo.x == bo.x && mo.y == bo.y && ( bo.x != ba.x || bo.y != ba.y ) DO  // Not executed
+                 PRINT "Don't move";
+                 NEW STATE S2;
+            DONE
+            CASE mo.x == bo.x && mo.y == bo.y && bo.x == ba.x && bo.y == ba.y DO      // Not executed
+                 PRINT "Monkey and box are under the banana";
+                 NEW STATE S3;
+            DONE
+            CASE mo.x != bo.x || mo.y != bo.y DO   // Executed
+                 PRINT "Go to box";
+                 mo.x = bo.x; mo.y = bo.y;
+                 NEW STATE S2;                     // Sets the current state to S2
+            DONE
+FI
+
+// The monkey moves the box
+IF STATE S2 CASE bo.x == ba.x && bo.y == ba.y DO  // Not executed
+                 PRINT "Don't move the box";
+                 NEW STATE S3;
+            DONE
+            CASE bo.x != ba.x || bo.y != ba.y DO  // Executed
+                 PRINT "Move the box";
+                 bo.x = ba.x; bo.y = ba.y;
+                 mo.x = ba.x; mo.y = mo.y;
+                 NEW STATE S3;                    // Sets the current state to S3
+            DONE
+FI

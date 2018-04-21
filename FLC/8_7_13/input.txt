@@ -1,0 +1,38 @@
+/* Header section: the 3 tokens can appear in any order and number, but only one <code> */
+/* or 3 or more <code> */
+?ABCDE?xxxyxxyy; /* <code> */
+09:10;
+/* <hour> */
+192.168.0.1:-2; /* <ip>
+*/
+09:10am;
+/* <hour> */
+%%
+/* States section */
+STATE A {x=10; y=11; z=13;}
+STATE B {x=3; z=5;}
+STATE C {x=1;}
+%%
+/* Transitions section */
+START A;
+PRINT;
+/* print A */
+IF STATE A # A.x==3 || A.x==10 && B.x==3 THEN STATE B;
+PRINT;
+/* print B */
+IF STATE A # A.x==3 || A.x==10 && B.x==3 THEN STATE A;
+PRINT;
+/* print B */
+IF STATE B # A.x==2 THEN
+/* Current state is A, boolean exp.
+is TRUE -> go to STATE B */
+/* Current state is B ->
+no state change */
+/* Current state is B, boolean exp.
+if FALSE */
+STATE A;
+ELSE
+STATE C;
+PRINT;
+/* print C */
+/* -> go to STATE C */

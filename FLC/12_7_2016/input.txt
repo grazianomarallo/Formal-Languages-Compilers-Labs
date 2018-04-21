@@ -1,0 +1,25 @@
+/* Header section */
+ijjiii-iijjii+ijijij+iijjijjiiijj;  /* <token2> */
+?HELLO1001 ;                        /* <token1> */
+2016/05/28;                         /* <date>   */
+?helloworld;                        /* <token1> */
+2016/06/20 ;                        /* <date>   */
+##
+/* Program section */
+a = 5;                                         /* Assignment: a=5 */
+b = ( 3-1 ) * 1;                               /* b=2*1=2 */ 
+c = stat(MIN, b, a-1, 2+3);                   /* Minimum between 2 (b), 4 (a-1) and 5 is 2 -> c=2 */
+d = case(b, 3:a+2, 2 : b+2 , 6:0);             /* Since b is equal to 2, value assigned to d is d=b+2=2+2=4 */
+
+e = case(a, stat(MAX, 2, stat(MAX,5,6)) : 3,         /* stat(MAX, 2, 6) = 6 -> action 6:3 */
+            5 : case(b, 3:stat(MIN,3,2), 2:4, 7+8:6) /* case(b, 3:2, 2:4, 15:6)=4 (because b=2) -> action is 5:4 */
+    );     /* The second action of the outer case (5:4) is executed (because a=5). At the end e=4 */
+
+f = case(a, 1:0, 2:3) + stat(MIN, 2, 3);       /* f=0+2=2 */
+
+switch a {
+  case 1+1: print 3;              /* if a is equal to 2 (FALSE in this case) -> printed value is 6 (3*2) */ 
+  case 5: print 3;                /* it prints 15 (5*3) because a is equal to 5 */
+          print stat(MIN, 3, 2);  /* it prints 10 (5*2) because a is equal to 5 */
+  case 3: print 2+5;              /* if a is equal to 3 (FALSE in this case) -> printed value is 21 (3*7) */ 
+};

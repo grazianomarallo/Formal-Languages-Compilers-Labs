@@ -1,0 +1,156 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+import java.lang.Math.*;
+
+init with {:
+       table = new HashMap<String, Double>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, Double> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal SEP,TOKEN1,TOKEN2,TOKEN3;
+terminal S,EQ,RO,RC,MINUS,PLUS,STAR,DIV;
+terminal C,BO,BC,SO,SC,CM,INRANGE,FZ,IF,PRINT;
+terminal PATH,MAX,QUOTE;
+terminal String ID;
+terminal Double FLOAT;
+
+
+
+
+
+non terminal prog,header,instructions,token;
+non terminal inst_list,inst,assignment,if_;
+non terminal operation;
+non terminal list_inter,inter;
+non terminal Double exp,function,point,list_point;
+non terminal Boolean range;
+non terminal nt0;
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP instructions {: System.out.println("Correct"); :};
+
+
+header::=  token TOKEN1 S token TOKEN1 S token  ;
+
+token::= token TOKEN2 S | token TOKEN3 S | ; 
+
+
+instructions::= inst_list | ;
+
+inst_list::= inst_list inst inst | inst inst inst inst ;
+
+inst::= assignment S | function S | if_ S ;
+
+
+
+
+assignment::= ID:x EQ exp:y {:parser.table.put(x,y);:}  ;
+
+function::= FZ RO operation CM list_point:x RC {:RESULT= x;:};
+
+operation::= MAX | PATH ;
+
+list_point::= list_point:old CM point:x  {: 
+							String op = (String)parser.stack(-4);
+							if(op.equals("PATH"))
+								RESULT= x+old;
+							else if(op.equals("MAX"))
+								RESULT= Math.max(x,old);				
+							
+						:}
+		| point:x {:RESULT=x;:} ;
+
+point::= SO exp:x CM exp:y SC {: Double i= (x -y)*(x-y);
+					   RESULT = (Double)Math.sqrt(i);		 :}   ;
+
+
+nt0::={:RESULT = parser.stack(-2); System.out.println(RESULT);:};
+
+
+if_::= IF exp list_inter ;
+
+list_inter::= list_inter CM nt0 inter  | inter:x;
+
+
+
+inter::= INRANGE range:x PRINT QUOTE:q {: if(x) System.out.println(q);:} ;
+
+range::= SO exp:x CM exp:y  SC {:
+					   Double exp1 = (Double)parser.stack(-6);
+					
+					    if(x <= exp1 && y >= exp1)
+						RESULT= true;
+						else RESULT = false;
+						:} ;
+
+exp::=  exp:x PLUS exp:y {:RESULT= x+y;:}
+	  |exp:x MINUS exp:y  {:RESULT= x-y;:}
+	  |exp:x STAR exp:y {:RESULT= x*y;:}
+	  |exp:x DIV exp:y {:RESULT= x/y;:}
+	  |RO exp:x RC {:RESULT= x;:}
+	  |ID:x {:RESULT= parser.table.get(x);:}
+	  |FLOAT:x {:RESULT= x;:}
+	  |function:x {:RESULT= x;:} ;
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

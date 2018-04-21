@@ -1,0 +1,148 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+       table = new HashMap<String, Float>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, Float> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal SEP,CODE,HOUR;
+terminal S,DOT,AUC, ARROW, EURO,STR;
+terminal C,BO,BC,CM,QUOTE;
+terminal Float CURR;
+terminal Integer UINT,MIN;
+terminal String USC;
+
+
+
+
+
+
+non terminal prog,header,currencies,auctions;
+non terminal code_c,hour;
+non terminal curr_list,curr;
+non terminal  user_list,user,string;
+non terminal Object[] advance;
+
+non terminal num,auction,advances;
+non terminal nt0,nt1,nt2,nt3;
+
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP currencies SEP auctions;
+
+
+header::= code_c hour code_c | hour code_c code_c| code_c hour code_c hour;
+
+code_c::= CODE S;
+
+hour::= hour HOUR S | HOUR S;
+
+currencies::= curr_list;
+
+curr_list::= curr_list curr | curr curr curr ; 
+
+string::= STR | EURO ;
+
+curr::= CURR string string C user_list S;		//CURR here is conversion rate
+
+nt0::= {:RESULT= parser.stack(-3);:};
+nt1::= {:RESULT= parser.stack(-5);:};
+
+user_list::= user_list CM nt1 user | nt0 user  | ;
+
+user::= USC:x  CURR:y {:	
+					Float conv_rate = (Float)parser.stack(-2);							 // CURR here is capital
+					Float val = conv_rate*y;
+					if(parser.table.get(x) == null)
+						parser.table.put(x,val);
+					else
+					 parser.table.put(x,(Float)parser.table.get(x)+val);	//increase deposit 
+				:};
+
+auctions::= auctions auction auction  | auction auction ;
+
+auction::= AUC UINT C QUOTE C UINT MIN ARROW advances S {:
+										:};
+
+nt2::= {:RESULT= parser.stack(-2);:};
+nt3::= {:RESULT= parser.stack(-4);:};
+advances::= advances CM  nt3 advance:x {:RESULT=x;: } 
+		| nt2 advance:x {:RESULT= x;:};
+
+advance::= USC:x C UINT:y C CURR:z string {: Integer time = (Integer)parser.stack(-6);
+									Float price = 0; 
+								Float money = parser.table.get(x);
+								if(y > time)
+									System.out.println(x+": "+"Error, advance out of time");
+								else if(z < price)
+									System.out.println(x+": "+"Error, advance less than the current auction value");
+								else if(money < z)
+									System.out.println(x+": "+"Error, available only " + money + " euro");
+								else {
+								System.out.println(" " + x + ": New auction price " + z + " euro");
+								RESULT = new Object[3];
+								RESULT[0] = z;
+								RESULT[1] = x; 
+								RESULT[2] = price;
+								}
+								
+								:} ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,145 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+       table = new HashMap<String, HashMap<String,Double>>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, HashMap<String,Double>> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+terminal TOKEN,TIME,SEP;
+terminal S,EQ,RO,RC,C,BO,BC,CM,DOT;
+terminal GREAT,SMALL;
+terminal STAT,WHEN,IS,FALSE,PRINT,TRUE,QUOTE;
+terminal NOT,AND,OR,X,Y,Z;
+terminal String ID;
+terminal Double NUM;
+
+
+
+non terminal prog,header,commands;
+non terminal time,cmd,bool_exp;
+non terminal p_att, coordinate,cond_list,condition,print_list;
+non terminal print_cmd;
+non terminal HashMap att_list;
+non terminal Object[] ptname_list;
+
+
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog::= header SEP commands;
+
+header::= TOKEN S time TOKEN S | time TOKEN S TOKEN S | TOKEN S TOKEN S time | TOKEN S TOKEN S;
+
+time::=  time TIME S | TIME S ;
+
+
+commands::= commands cmd cmd | cmd:x {:RESULT = x; :}  ;
+
+
+cmd::= ID:x EQ BO att_list:y BC S {: parser.table.put(x,y);  :}
+	| STAT RO ptname_list:x RC S	{: 
+							System.out.println(x);
+							System.out.println(parser.table.get(x[0]));
+								
+								 :}
+	| WHEN bool_exp cond_list S ;
+	
+
+
+att_list::= att_list CM p_att:x {: RESULT = (HashMap)x;:}
+		| p_att:x {: RESULT = (HashMap)x; :} 
+		| {: :}  ;
+
+p_att::=coordinate:x C NUM:y {:HashMap map = new HashMap<String,Double>();
+							map.put(x,y);
+							RESULT= map;
+							
+							  :} ;
+		
+coordinate::= X|Y|Z;
+		
+ptname_list::= ptname_list:m CM ID:x {: m[1]=x;
+								if(m[2] != "null")
+								m[2]= x; :} 
+			| ID:x {: RESULT= new Object[3];
+					RESULT[0]=x;:} ;
+
+cond_list::= cond_list condition | condition;
+
+condition::= IS TRUE print_list 
+		  | IS FALSE print_list;
+
+print_list::= print_list print_cmd | print_cmd;
+
+print_cmd::= PRINT QUOTE S;
+
+
+
+
+
+bool_exp::= NOT bool_exp:x //{:RESULT= !x ;:}
+		| bool_exp:x AND bool_exp:y //{:RESULT= x && y;:}
+		| bool_exp:x OR bool_exp:y //{:RESULT= x || y;:}
+		| ID GREAT ID DOT coordinate
+		| NUM SMALL ID DOT coordinate
+		| ID DOT coordinate GREAT NUM
+		| ID DOT coordinate SMALL NUM;
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,15 @@
+Scanner
+In the scanner there was two minor error that generate error.
+- while writing the regex for the hour I user () brackets instead of []
+  "Eg. parenthesis () instead of [] in 1[0-6] and 1[0-2]"
+- In regex double I wrote a + instead of a *. "Eg. + instead of * on the last [0-9]"
+  In the scanner file are present a comments where the two error are highlighted.
+
+Parser
+
+- In the declaration of non terminal I've redeclered  point and list_point as array of Double, declared if_ as Double and operation as String.
+- In the if_ and operation I've just added the return value that was missing.
+
+- I've done major change in point and list_point. This because they were declared as Double but I need an array of Double to keep track of all the value. In point I save the the two values of the point and set to zero a third element in order to use it to store the Max value or the partial sum of segment. 
+In list_point simply retrieve the value saved in point, perform the computation for the distance and the return the so computed value plus the current point in order to use for next operation.
+

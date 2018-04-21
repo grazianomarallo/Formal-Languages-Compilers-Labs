@@ -1,0 +1,32 @@
+/* Start section */
+--%%%A1234b11;
+12:50:55;
+++--%%%aBCd;
+
+******
+/* Program section */
+
+p1 = [x:3.0, y : 5.0, z: 40.0];      /* p1.x=3.0   p1.y=5.0   p1.z=40.0 */
+p2 = [ z: 30.0, x: .5, y: 2.0 ];      /* p2.x=0.5   p2.y=2.0   p2.z=30.0 */
+
+Z_STATS(p1, p2);                     /* MIN: 30.0   MAX: 40.0   AVG: 35.0 */
+
+p3 = [ x: 3.0, z: 20.0 ];            /* p3.x=3.0   p3.y=0.0   p3.z=20.0 */
+
+Z_STATS(p1, p2, p3);                 /* MIN: 20.0   MAX: 40.0   AVG: 30.0 */
+
+WHEN p2.z > 35.0 IS FALSE PRINT "NOT HIGH"; ;
+/* printed because boolean_expression is FALSE */
+
+WHEN NOT p1.z > 50.0 OR p2.x < 1.0 AND p3.z < 10.0 IS TRUE
+                                      PRINT "IS TRUE";
+                                      PRINT "printed because boolean_expression=TRUE";
+                                  IS FALSE
+                                      PRINT "IS FALSE";
+                                      PRINT "not printed because boolean_expression=TRUE";
+                                  IS TRUE
+                                      PRINT "IS TRUE 2";
+;
+
+/* NOT FALSE OR TRUE AND FALSE = TRUE OR TRUE AND FALSE = */
+/* = TRUE OR FALSE = TRUE -> boolean_expression = TRUE    */

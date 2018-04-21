@@ -1,0 +1,117 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+    table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, HashMap<String, Integer>> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+terminal SEP, TOKEN1, TOKEN2,TOKEN3;
+terminal  PLUS, MINUS, CM, C, S, BC, BO, RO,RC,DOT, EQ, EM,MIN,MAX;
+terminal String NAME;
+terminal  AND, OR, NOT, IF, ELSE,  FUEL, NOTEQ,EQEQ, POSITION;
+terminal DECLARE,FINCREASE,FDECREASE,MOVE;
+terminal X,Y,F;
+terminal Integer INT;
+
+
+non terminal prog, header, token12,token1,token2,token3;
+non terminal car,set, cmd_list, cmd, declare, if, fuel;
+non terminal attribute, attributes, mv_list, mv, var_attr,var_attr2,list_value;
+non terminal order;
+non terminal Boolean bool_exp;
+
+
+precedence left OR;
+precedence left EQEQ;
+precedence left NOTEQ;
+precedence left AND;
+precedence right NOT;
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP car;
+
+//HEADER SECTION
+header::= token12 token3 | token3 token12 ;
+token12::=   token1 |  token2 | ;
+
+token1::= TOKEN1 S  ;
+token2::= TOKEN2 S  ;
+token3::= TOKEN3 S | TOKEN3 S TOKEN3 S| TOKEN3 S TOKEN3 S TOKEN3 S |;
+
+//CAR SECTION
+car::= set cmd_list;
+
+set ::= POSITION order | ;
+order::= INT CM INT MINUS FUEL INT S| MINUS FUEL INT CM INT CM INT S;
+
+cmd_list::= cmd_list cmd cmd | cmd cmd cmd cmd;
+
+cmd::= declare S | if S| fuel S;
+
+
+
+declare::= DECLARE BO attributes  BC NAME ;
+
+attributes::= attributes attribute;
+
+attribute ::= NAME EQ INT S;
+
+
+if::= EM bool_exp BO mv_list BC S| EM bool_exp BO mv_list BC S ELSE BO mv_list BC ;
+
+mv_list::= mv_list mv | mv;
+
+mv::= MOVE INT CM INT CM FUEL INT S;
+
+var_attr ::= NAME DOT NAME EQEQ INT;
+
+bool_exp ::= var_attr EQEQ var_attr 
+	     |bool_exp AND bool_exp 
+  	      |bool_exp OR bool_exp 
+		 |bool_exp NOT bool_exp 
+		 |RO bool_exp  RC ;
+
+
+fuel::= FINCREASE MIN C RO list_value RC 
+	|FINCREASE MAX C RO list_value RC
+	|FDECREASE MIN C RO list_value RC
+	 |FDECREASE MAX C RO list_value RC ;
+
+list_value::= list_value var_attr2;
+var_attr2 ::= NAME DOT NAME ;
+

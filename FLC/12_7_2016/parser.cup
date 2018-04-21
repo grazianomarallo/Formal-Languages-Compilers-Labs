@@ -1,0 +1,190 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+       table = new HashMap<String, Integer>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, Integer> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal SEP,TOKEN1,TOKEN2,DATE;
+terminal S,EQ,RO,RC,MINUS,PLUS,STAR,DIV;
+terminal C,BO,BC,CM,STAT,CASE,SWITCH,PRINT;
+terminal MIN,MAX;
+terminal String VAR;
+terminal Integer UINT;
+
+
+
+
+
+non terminal prog,header,instructions;
+non terminal token, inst,switch;
+non terminal assign,op;
+non terminal  case_list,prints,case2;
+non terminal Object[] actions;
+non terminal Integer exp,exp_list,case,stat;
+non terminal nt0,nt1;
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP instructions;
+
+
+header::= token DATE S token |  token DATE S token DATE S token | token ;
+
+token::= token TOKEN1 S | token TOKEN2 S | ; 
+
+
+instructions::=  instructions inst inst | inst inst inst inst inst ;
+
+inst::= switch S | assign S;
+
+assign::= VAR:v EQ exp:x {: parser.table.put(v,x); System.out.println(v+"="+x+" ");:};
+
+exp::=  exp:x PLUS exp:y {:RESULT= x+y;:}
+	  |exp:x MINUS exp:y {:RESULT= x-y;:}
+	  |exp:x STAR exp:y {:RESULT= x*y;:}
+	  |exp:x DIV exp:y {:RESULT= x/y;:}
+	  |RO exp:x RC {:RESULT= x;:}
+	  |VAR:x {:RESULT= parser.table.get(x);:}
+	  |UINT:x {:RESULT= x;:}
+	  |stat:x {:RESULT= x;:} 
+	  |case:x {:RESULT= x;:} ;
+	  
+stat::= STAT RO op CM exp_list:x RC {: RESULT = x;:};
+
+op::= MIN {:RESULT= new String("MIN");:} | MAX {:RESULT= new String("MAX");:} ;
+
+exp_list::=  exp_list:old CM exp:x {: String op =(String) parser.stack(-4);
+							
+							if(op.equals("MAX")){
+							if(old > x) RESULT= old; else RESULT=x; 
+							}
+							if(op.equals("MIN")){
+						
+							if(old < x) RESULT= old; else RESULT=x;
+							}
+							:}
+		| exp:x {:RESULT=x;:} | {:RESULT = 0;:};
+
+case::= CASE RO VAR CM actions:x RC {: RESULT = (Integer)x[1];  :} ;
+
+actions::= actions:old CM exp:x C exp:y {:if((Boolean)old[0]==false){
+								RESULT = new Object[2];
+					  			String var = (String)parser.stack(-6);
+					  			 //String val = ((Integer) parser.table.get(var).intValue()); DOES NOT WORK WHY?
+								 if( parser.table.get(var).intValue() == x){
+								  RESULT[0]= true;
+								  RESULT[1]= y;
+								  }
+								  else {
+								  RESULT[0]=false;
+								  RESULT[1]=0;
+								 }
+								} 
+								else RESULT = old;
+							:}
+		| exp:x C exp:y {:RESULT = new Object[2];
+					  String var = (String)parser.stack(-4);
+					 // Integer val = (Integer) parser.table.get(var).intValue();
+					  if( parser.table.get(var).intValue() == x){
+					  RESULT[0]= true;
+					  RESULT[1]= y;
+					  }
+					  else {
+					  RESULT[0]=false;
+					  RESULT[1]=0;
+					 }
+					:} ;
+
+switch::= SWITCH VAR BO  case_list BC;
+
+nt0::= {: RESULT= parser.stack(-1);:};
+nt1::= {: RESULT= parser.stack(-2);:};
+
+case_list::= case_list nt1 case2 | nt0 case2 ;
+
+case2::= CASE exp C prints  ;
+
+prints::= prints PRINT exp:x S {: 
+						String var = (String) parser.stack(-7);
+						Integer val = (Integer)parser.stack(-5);
+						if(parser.table.get(var).intValue() == val )
+						System.out.println(x*val+" ");
+						
+						:}
+		| PRINT exp:x S {: String var = (String) parser.stack(-6);
+					Integer val = (Integer)parser.stack(-4);
+					if(parser.table.get(var).intValue() == val)
+						System.out.println(x*val+" ");
+					:}; 
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

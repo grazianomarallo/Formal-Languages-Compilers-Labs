@@ -1,0 +1,21 @@
+"hello £$%&":130.192.12.17; /* <token2> */
+%abcdef-1YXXXY ;
+/* <token3> */
+11:37;
+/* <token1> */
+01:50pm ;
+/* <token1> */
+%xyzj3;
+/* <token3> */
+##
+/* TRUE && FALSE || TRUE = TRUE */
+EVALUATE TRUE && (1+2)*3 == 4 || TRUE;
+/* x=TRUE */
+SAVE x=o[-1]; /* FALSE */
+EVALUATE 2 == 3; /* FALSE */
+/* CASE_FALSE: FALSE && FALSE = FALSE */
+CASE_TRUE x, CASE_FALSE FALSE && 8+3 == 9;
+/* i=FALSE; j=FALSE; k=TRUE */
+SAVE i=o[-1], j = TRUE && FALSE, k=o[-4]; /* FALSE */
+/* ! FALSE && TRUE = TRUE AND TRUE = TRUE */
+EVALUATE ! i && 2 == 2;

@@ -1,0 +1,188 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+       table = new HashMap<String, HashMap<String,Integer>>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, HashMap<String,Integer>> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+terminal TOKEN,DATE,SEP;
+terminal S,EQ,RO,RC,C,BO,BC,CM,DOT;
+terminal MINUS,PLUS,STAR,DIV;
+terminal START,MOVE,VAR,WHEN,DONE,THEN;
+terminal NOT,AND,OR,NOTEQ,EQEQ;
+terminal String NAME;
+terminal Integer INT;
+
+non terminal prog,header,commands,token;
+non terminal Integer[] start_command,comands,var,move,when,cmd,move_list;
+non terminal Integer coordinate,mv;
+non terminal HashMap list_attr;
+non terminal Object[] attr;
+non terminal Boolean bool_expr;
+non terminal nt0;
+
+
+precedence left OR;
+precedence left EQEQ;
+precedence left NOTEQ;
+precedence left AND;
+precedence right NOT;
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog::= header SEP commands;
+
+header::= token DATE S token  | token ;
+
+token::= token TOKEN S | ;
+
+commands::= start_command comands;
+
+start_command::= START coordinate:x CM coordinate:y CM coordinate:z S {: RESULT= new Integer[3];
+														   RESULT[0]= x;
+														   RESULT[1]= y;
+														   RESULT[2]= z;
+														   //save into array starting point
+														   	 ;:};
+
+coordinate::= PLUS INT:x {: RESULT= +x; :} 
+		    | MINUS INT:x{: RESULT= -x; :}  ;
+		    
+comands::= comands cmd:x {:RESULT= x;:} | {: RESULT= (Integer[]) parser.stack(0);:};
+
+cmd::= var:x S{:RESULT=x;:} | move:x S {:RESULT=x;:} | when:x S {:RESULT=x;:} ;
+
+move::= MOVE mv:x CM mv:y CM mv:z {:RESULT= new Integer[3];
+							 RESULT[0]= ((Integer[]) parser.stack(-6))[0]+x;
+							 RESULT[1]= ((Integer[]) parser.stack(-6))[1]+y;
+							 RESULT[2]= ((Integer[]) parser.stack(-6))[2]+z;
+							 System.out.println("POSITION: X="+RESULT[0]+ " Y="+RESULT[1]+" Z="+ RESULT[2]); 
+							:} ;
+
+mv::= coordinate:x {:RESULT=x;:} 
+	| NAME:x DOT NAME:y {:RESULT= parser.table.get(x).get(y) ;:} ;
+	
+var::= VAR BO list_attr:x BC NAME:y {:parser.table.put(y,x); RESULT= (Integer[])parser.stack(-5);:} ;
+
+list_attr::= list_attr:map CM attr:x CM attr:y CM attr:z {:
+												map.put(x[0],x[1]);				
+		   										map.put(y[0],y[1]);
+		   										map.put(z[0],z[1]);
+		   										RESULT = map; //return the map to list_attr
+											  :}
+		   | attr:x CM attr:y CM attr:z {:RESULT= new HashMap<String,Integer>();	//create a new hashmap
+		   							RESULT.put(x[0],x[1]);				//and put value into it
+		   							RESULT.put(y[0],y[1]);
+		   							RESULT.put(z[0],z[1]); :} ;
+
+attr::= NAME:x C coordinate:y {:RESULT= new Object[2]; //Since attribute are string followed by a number
+						RESULT[0]= x;			//save them into an array of object
+						RESULT[1]= y; :} ;
+
+nt0::= {:RESULT = parser.stack(-3); :};	//get array of position 	
+when::= WHEN bool_expr THEN nt0 move_list:x DONE  {:RESULT= x;: } ;
+
+
+
+move_list::= move_list MOVE mv:x CM mv:y CM mv:z S {: Integer[] currentPost= parser.stack(-7);	//get current  position
+										Boolean check = parser.stack(-10);
+										if(check == true){
+										RESULT= new Integer[3];
+										 RESULT[0]= currentPos[0]+ x;
+										 RESULT[1]=currentPos[1]+ y;
+										 RESULT[2]= currentPos[2]+z;
+										 System.out.println("POSITION: X="+RESULT[0]+ " Y="+RESULT[1]+" Z="+ RESULT[2]); 
+										}
+										else 
+											RESULT= currentPos;
+									:}
+
+			| MOVE mv:x CM mv:y CM mv:z S {: System.out.println("prova");
+										Integer[] currentPost= parser.stack(-7);	//get current  position
+										Boolean check = parser.stack(-8);
+										if(check == true){
+										RESULT= new Integer[3];
+										 RESULT[0]= currentPos[0]+ x;
+										 RESULT[1]=currentPos[1]+ y;
+										 RESULT[2]= currentPos[2]+z;
+										 System.out.println("POSITION: X="+RESULT[0]+ " Y="+RESULT[1]+" Z="+ RESULT[2]); 
+										}
+										else 
+											RESULT= currentPos;
+									:};
+									
+									
+
+bool_expr::= NOT bool_expr:x {: RESULT = !x; :}
+		| bool_expr:x AND bool_expr:y {: RESULT = x && y; :}
+		| bool_expr:x OR bool_expr:y {: RESULT = x || y; :}
+		| coordinate:x EQEQ NAME:y DOT NAME:z {:RESULT= (x == (parser.table.get(y).get(z)));:}
+		| NAME:x DOT NAME:y EQEQ coordinate:z {:RESULT= (z == (parser.table.get(x).get(y)));:}
+		| coordinate:x NOTEQ NAME:y DOT NAME:z {:RESULT= (x != (parser.table.get(y).get(z)));:}
+		| NAME:x DOT NAME:y NOTEQ coordinate:z {:RESULT= (z != (parser.table.get(x).get(y)));:};
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

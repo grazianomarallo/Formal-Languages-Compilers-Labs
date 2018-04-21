@@ -1,0 +1,167 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+   table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, HashMap<String, Integer>> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal CODE,HOUR,IP,SEP;
+
+terminal S,DOT,CM,EQ,RO,RC,BO,BC;
+terminal EQU,START,STATE,HASH,IF,THEN,ELSE,PRINT;
+terminal Boolean AND, OR, NOT;
+terminal Integer INT;
+terminal  String ID;
+
+
+
+non terminal prog,header,mod1,mod2;
+non terminal token1_2,ip,code_c,hour;
+non terminal state_sec, state_list,state;
+non terminal Integer var;
+non terminal String if_cmd,cmd,cmd_list,start_cmd;
+non terminal trans_sec;
+non terminal Boolean bool;
+non terminal nt0;
+non terminal HashMap var_decl,var_list; 
+
+
+
+
+precedence left OR;
+precedence left AND;
+
+
+
+
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP state_sec SEP trans_sec  {:
+		System.out.println("Correct");
+	:};
+
+
+header ::= mod1 code_c mod1
+	| code_c mod1
+	| mod1 code_c
+	| code_c code_c code_c
+;
+
+mod1 ::= mod1 hour
+	| mod1 ip
+	| hour
+	| ip
+;
+
+
+ip::= IP S ;
+hour::= HOUR S ;
+code_c::= CODE S ;
+
+
+
+
+
+
+
+state_sec::= state_list;
+
+state_list::= state_list state state | state state state;
+
+
+state::= STATE ID:x BO  var_list:y BC {:parser.table.put(x,y); :} ;
+
+var_list::= var_list:m ID:x EQ INT:y S {: m.put(x,y); RESULT=m; :} 
+		| ID:x EQ INT:y S {:
+						RESULT= new HashMap<String, Integer>();
+						RESULT.put(x,y);
+						 :};
+
+
+			
+	   
+
+trans_sec::= start_cmd cmd_list ;
+
+start_cmd::= START ID:x S {:RESULT = x;:};
+
+cmd_list::= cmd_list cmd:x {:RESULT= x;:} | {:RESULT = (String)parser.stack(0); :} ;
+
+
+cmd::= PRINT S {: RESULT = (String)parser.stack(-2);
+			System.out.println("Current state: "+RESULT );
+			:} 
+	 | if_cmd:x {:RESULT = x;:} ;
+
+if_cmd::= IF STATE ID:x HASH bool:b THEN STATE ID:y S {:	String curr_state = (String) parser.stack(-9);
+											if(curr_state.equals(x)){
+												if(b)
+												RESULT = y;
+												else RESULT = curr_state;
+											}
+											else RESULT= curr_state;	 
+				
+												
+										:}
+		|IF STATE ID:x HASH bool:b THEN STATE ID:y S ELSE STATE ID:z S{:
+													String curr_state = (String) parser.stack(-13);
+													if(curr_state.equals(x)){
+														if(b)
+														RESULT = y;
+														else RESULT = z;
+														}
+													else RESULT= curr_state;	 
+			
+													:};
+
+bool::= bool:x AND bool:y {:RESULT= x && y;:}
+	 | bool:x OR bool:y {:RESULT= x || y; :}
+	 | var:x EQU var:y {:RESULT= x.equals(y);:}; // Here == not Works use equals 
+
+
+var::= INT:x {:RESULT= x;:} | ID:x DOT ID:y {: HashMap<String,Integer> m = parser.table.get(x);
+									 	RESULT = m.get(y); 
+									 :} ;
+
+
+
+
+
+

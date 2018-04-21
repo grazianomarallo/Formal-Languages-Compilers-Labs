@@ -1,0 +1,257 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+       table = new HashMap<String, Double>();
+:};
+
+parser code 	{:
+
+    public HashMap<String, Double> table;
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+terminal SEP, TOKEN,DATE;
+terminal RO, RC, BO, BC, MINUS,ARROW , SHARP,QM;
+terminal STC1, STC2, MIN, MAX, SET, POWER,WATER;
+terminal Double FLOAT,TEMP,PRESSURE;
+terminal Boolean FALSE,TRUE;
+terminal CM, C, S, EQ;
+terminal  AND,OR,NOT,INCREASE,DECREASE,AVG,ADD,SUB;
+
+
+
+non terminal prog, header, section;
+non terminal token1,token2, date1, tk;
+non terminal HashMap set,setter,commands,cmd1,cmd2;
+non terminal List float_list,float_l;
+non terminal Double avg,float,var_list,variation; 
+non terminal Boolean exp;
+non terminal List arr;
+non terminal nt0,nt1,nt2;
+
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP section;
+
+
+header::= token1 | token2;
+
+token1::=  TOKEN S TOKEN S TOKEN S TOKEN S date1 | token1 TOKEN S TOKEN S date1;
+
+date1::= DATE S DATE S DATE S | DATE S DATE S DATE S DATE S DATE S DATE S DATE S DATE S DATE S DATE S DATE S DATE S DATE S ;
+
+token2::= DATE S tk DATE S tk DATE S tk;
+
+tk ::= tk TOKEN S | ;
+
+
+section::= set;
+
+set::= SET setter:x S commands ;
+
+setter::= POWER FLOAT:x MINUS WATER FLOAT:y {: RESULT = new HashMap<String,Double>();
+									  RESULT.put("P",x);
+									  RESULT.put("W",y);	
+									  System.out.println("power: "+x+", water: "+y );								
+										:} 
+		| WATER FLOAT:x MINUS POWER FLOAT:y {: RESULT = new HashMap<String,Double>();
+										 RESULT.put("W",x);
+										 RESULT.put("P",y);		
+										System.out.println("water: "+x+", power: "+ y);	 							
+										:} 
+		| POWER FLOAT:x{: RESULT = new HashMap<String,Double>();
+										 RESULT.put("P",x);
+										 double y=100.0;
+										 RESULT.put("W",y);
+							System.out.println("power: "+x+", water: "+ y);										
+										:} 
+		| WATER FLOAT:x {: RESULT = new HashMap<String,Double>();
+										 RESULT.put("W",x);
+										double y=100.0;
+										 RESULT.put("P",y);	
+							 System.out.println("power: "+x+", water: "+ y);									
+										:} 
+		|/*EMPTY*/ {: RESULT = new HashMap<String,Double>();
+										double x=100.0;
+										 RESULT.put("W",x);
+										double y=100.0;
+										 RESULT.put("P",y);	
+							 System.out.println("power: "+x+", water: "+ y);									
+										:} 
+;
+
+commands ::= commands nt0 cmd1:map  S {: System.out.println("power: "+map.get("P")+", water: "+ map.get("W")); RESULT= map;:}
+		| commands nt0 cmd2:map S {: System.out.println("power: "+map.get("P")+", water: "+ map.get("W")); RESULT= map;:}
+		| cmd1:map S {: System.out.println("power: "+map.get("P")+", water: "+ map.get("W")); RESULT= map;:} 
+		| cmd2:map S {: System.out.println("power: "+map.get("P")+", water: "+ map.get("W")); RESULT= map;:};
+		
+nt0::= {:RESULT = parser.stack(-1); :};
+
+cmd1::=  STC1 INCREASE POWER exp:x QM avg:y C avg:z 
+		{:HashMap<String,Double> map = (HashMap) parser.stack(-9); //here get the map with the value
+		if(x == true){ //if true increase value by taking first avg
+		map.put("P",map.get("P")+y);
+		RESULT= map;
+		}
+		else{
+		map.put("P",map.get("P")+z);
+		RESULT= map;
+		}
+		:}
+	   |STC1 INCREASE WATER exp:x QM avg:y C avg:z
+	   {:HashMap<String,Double> map = (HashMap) parser.stack(-9); //here get the map with the value
+		if(x==true){
+		map.put("W",map.get("W")+y);
+		RESULT= map;
+		}
+		else{
+		map.put("W",map.get("W")+z);
+		RESULT= map;
+		}
+		:}
+	   |STC1 DECREASE POWER exp:x QM avg:y C avg:z
+	   {:HashMap<String,Double> map = (HashMap) parser.stack(-9); //here get the map with the value
+		if(x== true){
+		map.put("P",map.get("P")-y);
+		RESULT= map;
+		}
+		else{
+		map.put("P",map.get("P")-z);
+		RESULT= map;
+		}
+		:}
+	   |STC1 DECREASE WATER exp:x QM avg:y C avg:z
+	   {: HashMap<String,Double> map = (HashMap) parser.stack(-9); //here get the map with the value
+		if(x==true){
+		
+		map.put("W",map.get("W")-y);
+		RESULT= map;
+		}
+		else{
+		map.put("W",map.get("W")-z);
+		RESULT= map;
+		}
+		:}
+;
+	
+exp::= exp:x AND exp:y	{: RESULT = x && y;:}
+	  | exp:x OR exp:y  {: RESULT = x || y;:}
+	  | NOT exp:x 		{: RESULT = !x;:}
+	  | RO exp:x RC 	{: RESULT = x ;:}
+	  | FALSE:x		{: RESULT = false ;:}
+	  | TRUE:x		{: RESULT = true ;:}
+;	
+
+
+avg::= AVG RO float_l:x RC {: 
+							// get the array list in x, iterate all the value and compute the avg
+			   				double sum =0;
+			   				for(Double val: (ArrayList<Double>)x){
+			   				sum += (double)val;
+			   				}
+			   				
+			   				if(x.size() !=0){
+			   				RESULT = sum / x.size();
+			   				}
+			   				else
+			   				RESULT =0.;
+			 			:}  
+;
+
+
+float_l::= float_list:x {:RESULT = x;:}
+		| {: RESULT = new ArrayList();
+		:}
+;
+
+float_list::= float_list:old CM float:x
+				{: RESULT = old; // create a new arraylist in order to store all the value of avg
+				   RESULT.add(x);	//add the value
+				 :}  
+			 |float:x 
+				 {:
+				 RESULT= new ArrayList();
+				   RESULT.add(x);
+				 :}
+;
+			
+			
+float::=  FLOAT:x {:RESULT = (Double)x; :} 
+		| avg:x {: RESULT = (Double)x;:}
+;
+
+
+cmd2::= STC2 FLOAT PRESSURE FLOAT TEMP SHARP WATER ARROW var_list:x
+ 		{:	
+ 			
+ 		HashMap<String,Double> map = (HashMap) parser.stack(-10); //here get the map with the value
+		map.put("W",map.get("W")+x);
+		RESULT= map;
+		:}
+	  |STC2 FLOAT PRESSURE FLOAT TEMP SHARP POWER ARROW  var_list:x
+	  {:	
+	  	
+ 		HashMap<String,Double> map = (HashMap) parser.stack(-10); //here get the map with the value
+		map.put("P",map.get("P")+x);
+		RESULT= map;
+		:} 
+;
+	
+var_list::=  var_list:old CM nt1 variation:x {:RESULT = old + x;   :}			
+		| nt2 variation:x {:RESULT= x; :};
+		
+nt1::= {:RESULT= parser.stack(-2);:};
+nt2::= {:RESULT= parser.stack(-2);:};
+
+variation::= TEMP:x ADD FLOAT:y {: x =(Double) parser.stack(-10);
+							//System.out.println("secondo "+x);
+							RESULT= (x*y);
+							:}
+		|TEMP:x SUB FLOAT:y {: x =(Double) parser.stack(-10);
+							//System.out.println("secondo"+x);
+							RESULT= (x*-y);
+							:}
+		|PRESSURE:x ADD FLOAT:y {: x =(Double) parser.stack(-10);
+							//System.out.println("primo "+x);
+							RESULT= (x*y);
+							:}
+		| PRESSURE:x SUB FLOAT:y {: x =(Double) parser.stack(-12);
+							//System.out.println("ultimo "+x);
+							RESULT= (x*(-y));
+							:}
+;
+
+
+
